@@ -26,7 +26,8 @@ import os
 
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
-from qgis.PyQt.QtWidgets import QVBoxLayout
+from qgis.PyQt.QtWidgets import QVBoxLayout, QTableWidgetItem
+from qgis.PyQt.QtCore import Qt
 
 import matplotlib
 matplotlib.use('Qt5Agg')
@@ -57,11 +58,12 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         layout = QVBoxLayout(self.graph_widget)
         layout.addWidget(self.canvas)
 
-    def plot_schooltype_data(self, schooltype_counts):
+    def plot_schooltype_data(self, schooltype_counts, features_data):
         """
-        Plot a bar chart with SchoolType data
+        Plot a bar chart with SchoolType data and populate the data table
 
         :param schooltype_counts: Dictionary with SchoolType values as keys and counts as values
+        :param features_data: List of dictionaries with feature data for the table
         """
         # Clear previous plot
         self.figure.clear()
@@ -96,3 +98,44 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
 
         # Refresh canvas
         self.canvas.draw()
+
+        # Populate the data table with features data
+        self.populate_table(features_data)
+
+    def populate_table(self, features_data):
+        """
+        Populate the QTableWidget with feature data
+
+        :param features_data: List of dictionaries with feature data
+        """
+        # Set the number of rows
+        self.data_table.setRowCount(len(features_data))
+
+        # Define column order matching the UI
+        columns = ['CDCode', 'Region', 'CountyName', 'DistrictNa', 'SchoolName',
+                  'SchoolType', 'Status', 'SchoolLeve', 'City']
+
+        # Populate the table
+        for row, feature in enumerate(features_data):
+            for col, field_name in enumerate(columns):
+                # Get the value from the feature
+                value = feature.get(field_name, 'N/A')
+
+                # Create table item
+                item = QTableWidgetItem(str(value))
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # Make read-only
+
+                # Center align certain columns
+                if field_name in ['CDCode', 'Status', 'SchoolLeve']:
+                    item.setTextAlignment(Qt.AlignCenter)
+
+                self.data_table.setItem(row, col, item)
+
+        # Resize columns to fit content
+        self.data_table.resizeColumnsToContents()
+
+        # Adjust column widths for better visibility
+        # Make sure important columns are visible
+        self.data_table.setColumnWidth(4, 200)  # SchoolName - wider
+        self.data_table.setColumnWidth(2, 150)  # CountyName
+        self.data_table.setColumnWidth(3, 150)  # DistrictNa

@@ -10,13 +10,13 @@
    </rect>
   </property>
   <property name="windowTitle" >
-   <string>Graph layer - Amenity Statistics</string>
+   <string>Graph layer - School Type Statistics</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="label_title">
      <property name="text">
-      <string>Amenity Field Statistics</string>
+      <string>School Type Field Statistics</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -35,9 +35,84 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>450</height>
+       <height>300</height>
       </size>
      </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_table">
+     <property name="text">
+      <string>School Data (Top 10 by SchoolType)</string>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="data_table">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>200</height>
+      </size>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="sortingEnabled">
+      <bool>false</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string>CDCode</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Region</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>County Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>District Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>School Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>School Type</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Status</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>School Level</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>City</string>
+      </property>
+     </column>
     </widget>
    </item>
    <item>

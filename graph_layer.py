@@ -209,17 +209,24 @@ class GraphInfo:
         # Get field names
         field_names = [field.name() for field in layer.fields()]
 
-        # Check if 'SchoolType' field exists
-        if 'SchoolType' not in field_names:
+        # Required fields
+        required_fields = ['CDCode', 'Region', 'CountyName', 'DistrictNa', 'SchoolName',
+                          'SchoolType', 'Status', 'SchoolLeve', 'City']
+
+        # Check if all required fields exist
+        missing_fields = [f for f in required_fields if f not in field_names]
+        if missing_fields:
             QMessageBox.warning(
                 self.iface.mainWindow(),
-                "Field Not Found",
-                "The active layer does not have a 'SchoolType' field.\n\nAvailable fields: " + ", ".join(field_names)
+                "Missing Fields",
+                f"The active layer is missing the following fields: {', '.join(missing_fields)}\n\nAvailable fields: {', '.join(field_names)}"
             )
             return
 
-        # Count SchoolType values
+        # Count SchoolType values and collect feature data
         schooltype_counts = {}
+        features_data = []
+
         for feature in layer.getFeatures():
             # Get SchoolType value and convert QVariant to Python type
             schooltype_value = feature['SchoolType']
@@ -238,6 +245,20 @@ class GraphInfo:
             else:
                 schooltype_counts[schooltype_value] = 1
 
+            # Store feature data
+            feature_data = {
+                'CDCode': str(feature['CDCode']) if feature['CDCode'] is not None else 'N/A',
+                'Region': str(feature['Region']) if feature['Region'] is not None else 'N/A',
+                'CountyName': str(feature['CountyName']) if feature['CountyName'] is not None else 'N/A',
+                'DistrictNa': str(feature['DistrictNa']) if feature['DistrictNa'] is not None else 'N/A',
+                'SchoolName': str(feature['SchoolName']) if feature['SchoolName'] is not None else 'N/A',
+                'SchoolType': schooltype_value,
+                'Status': str(feature['Status']) if feature['Status'] is not None else 'N/A',
+                'SchoolLeve': str(feature['SchoolLeve']) if feature['SchoolLeve'] is not None else 'N/A',
+                'City': str(feature['City']) if feature['City'] is not None else 'N/A'
+            }
+            features_data.append(feature_data)
+
         # Check if we have data to plot
         if not schooltype_counts:
             QMessageBox.warning(
@@ -253,14 +274,17 @@ class GraphInfo:
         # Get only top 10 categories
         top_10_schooltypes = dict(list(schooltype_counts.items())[:10])
 
+        # Filter features to show only first 10 records (or you can filter by top school types)
+        top_10_features = features_data[:10]
+
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
             self.dlg = GraphInfoDialog()
 
-        # Plot the data (only top 10)
-        self.dlg.plot_schooltype_data(top_10_schooltypes)
+        # Plot the data (only top 10) and pass features data for the table
+        self.dlg.plot_schooltype_data(top_10_schooltypes, top_10_features)
 
         # show the dialog
         self.dlg.show()
