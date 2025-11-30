@@ -1,0 +1,90 @@
+<ui version="4.0" >
+ <class>GraphInfoDialogBase</class>
+ <widget class="QDialog" name="GraphInfoDialogBase" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>Graph layer - Amenity Statistics</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label_title">
+     <property name="text">
+      <string>Amenity Field Statistics</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="graph_widget" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>450</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="button_box">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>button_box</sender>
+   <signal>accepted()</signal>
+   <receiver>GraphInfoDialogBase</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="source_label" >
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destination_label" >
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>button_box</sender>
+   <signal>rejected()</signal>
+   <receiver>GraphInfoDialogBase</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="source_label" >
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destination_label" >
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
