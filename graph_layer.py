@@ -271,11 +271,8 @@ class GraphInfo:
         # Sort by count (descending)
         schooltype_counts = dict(sorted(schooltype_counts.items(), key=lambda x: x[1], reverse=True))
 
-        # Get only top 10 categories
+        # Get only top 10 categories for the graph
         top_10_schooltypes = dict(list(schooltype_counts.items())[:10])
-
-        # Filter features to show only first 10 records (or you can filter by top school types)
-        top_10_features = features_data[:10]
 
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
@@ -283,8 +280,8 @@ class GraphInfo:
             self.first_start = False
             self.dlg = GraphInfoDialog()
 
-        # Plot the data (only top 10) and pass features data for the table
-        self.dlg.plot_schooltype_data(top_10_schooltypes, top_10_features)
+        # Plot the data (top 10 for graph) and pass ALL features data for the table
+        self.dlg.plot_schooltype_data(top_10_schooltypes, features_data)
 
         # show the dialog
         self.dlg.show()

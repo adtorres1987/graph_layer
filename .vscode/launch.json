@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Adjuntar a QGIS",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/Users/alfredotorres/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/graph_layer"
+                }
+            ],
+            "justMyCode": false
+        }
+    ]
+}

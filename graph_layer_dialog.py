@@ -58,12 +58,34 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         layout = QVBoxLayout(self.graph_widget)
         layout.addWidget(self.canvas)
 
+        # Store all features data for dynamic column selection
+        self.all_features_data = []
+
+        # Connect table header click signal
+        self.data_table.horizontalHeader().sectionClicked.connect(self.on_table_header_clicked)
+
     def plot_schooltype_data(self, schooltype_counts, features_data):
         """
         Plot a bar chart with SchoolType data and populate the data table
 
         :param schooltype_counts: Dictionary with SchoolType values as keys and counts as values
         :param features_data: List of dictionaries with feature data for the table
+        """
+        # Store all features data for later use when clicking on columns
+        self.all_features_data = features_data
+
+        # Plot the graph with SchoolType data
+        self.plot_column_data('SchoolType', schooltype_counts)
+
+        # Populate the data table with features data
+        self.populate_table(features_data)
+
+    def plot_column_data(self, column_name, column_counts):
+        """
+        Plot a bar chart with column data
+
+        :param column_name: Name of the column being plotted
+        :param column_counts: Dictionary with column values as keys and counts as values
         """
         # Clear previous plot
         self.figure.clear()
@@ -72,11 +94,11 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         ax = self.figure.add_subplot(111)
 
         # Prepare data - ensure all values are Python native types
-        schooltypes = [str(key) for key in schooltype_counts.keys()]
-        counts = [int(value) for value in schooltype_counts.values()]
+        categories = [str(key) for key in column_counts.keys()]
+        counts = [int(value) for value in column_counts.values()]
 
         # Create bar chart
-        bars = ax.bar(schooltypes, counts, color='steelblue', edgecolor='black', alpha=0.7)
+        bars = ax.bar(categories, counts, color='steelblue', edgecolor='black', alpha=0.7)
 
         # Add value labels on top of bars
         for bar in bars:
@@ -86,21 +108,56 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
                    ha='center', va='bottom', fontsize=9)
 
         # Customize plot
-        ax.set_xlabel('School Type', fontsize=12, fontweight='bold')
+        ax.set_xlabel(column_name, fontsize=12, fontweight='bold')
         ax.set_ylabel('Count', fontsize=12, fontweight='bold')
-        ax.set_title('Distribution of School Types in Active Layer', fontsize=14, fontweight='bold')
+        ax.set_title(f'Distribution of {column_name} in Active Layer', fontsize=14, fontweight='bold')
         ax.grid(axis='y', alpha=0.3, linestyle='--')
 
         # Rotate x-axis labels if there are many categories
-        if len(schooltypes) > 5:
+        if len(categories) > 5:
             ax.tick_params(axis='x', rotation=45)
             self.figure.tight_layout()
 
         # Refresh canvas
         self.canvas.draw()
 
-        # Populate the data table with features data
-        self.populate_table(features_data)
+    def on_table_header_clicked(self, column_index):
+        """
+        Handle table header click - update graph to show distribution of clicked column
+
+        :param column_index: Index of the clicked column
+        """
+        # Define column order matching the UI
+        columns = ['CDCode', 'Region', 'CountyName', 'DistrictNa', 'SchoolName',
+                  'SchoolType', 'Status', 'SchoolLeve', 'City']
+
+        # Get the column name
+        if column_index < len(columns) and self.all_features_data:
+            clicked_column = columns[column_index]
+
+            # Count values for the selected column
+            column_counts = {}
+            for feature in self.all_features_data:
+                value = feature.get(clicked_column, 'N/A')
+
+                # Handle NULL/empty values
+                if value is None or value == '' or value == 'NULL':
+                    value = 'N/A'
+
+                # Count occurrences
+                if value in column_counts:
+                    column_counts[value] += 1
+                else:
+                    column_counts[value] = 1
+
+            # Sort by count (descending)
+            column_counts = dict(sorted(column_counts.items(), key=lambda x: x[1], reverse=True))
+
+            # Get only top 10 categories
+            top_10_counts = dict(list(column_counts.items())[:10])
+
+            # Plot the graph with the selected column data
+            self.plot_column_data(clicked_column, top_10_counts)
 
     def populate_table(self, features_data):
         """
@@ -126,8 +183,8 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # Make read-only
 
                 # Center align certain columns
-                if field_name in ['CDCode', 'Status', 'SchoolLeve']:
-                    item.setTextAlignment(Qt.AlignCenter)
+                # if field_name in ['CDCode', 'Status', 'SchoolLeve']:
+                #     item.setTextAlignment(Qt.AlignCenter)
 
                 self.data_table.setItem(row, col, item)
 
@@ -136,6 +193,18 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
 
         # Adjust column widths for better visibility
         # Make sure important columns are visible
-        self.data_table.setColumnWidth(4, 200)  # SchoolName - wider
-        self.data_table.setColumnWidth(2, 150)  # CountyName
-        self.data_table.setColumnWidth(3, 150)  # DistrictNa
+        # self.data_table.setColumnWidth(4, 200)  # SchoolName - wider
+        # self.data_table.setColumnWidth(2, 150)  # CountyName
+        # self.data_table.setColumnWidth(3, 150)  # DistrictNa
+
+        # Make header clickable and add cursor
+        header = self.data_table.horizontalHeader()
+        header.setCursor(Qt.PointingHandCursor)
+
+        # Add tooltip to headers to indicate clickability
+        for col, field_name in enumerate(columns):
+            header_item = self.data_table.horizontalHeaderItem(col)
+            if header_item is None:
+                header_item = QTableWidgetItem()
+                self.data_table.setHorizontalHeaderItem(col, header_item)
+            header_item.setToolTip(f"Click to show {field_name} distribution in graph")

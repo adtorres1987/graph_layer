@@ -43,7 +43,7 @@
    <item>
     <widget class="QLabel" name="label_table">
      <property name="text">
-      <string>School Data (Top 10 by SchoolType)</string>
+      <string>School Data (All Records)</string>
      </property>
      <property name="font">
       <font>
