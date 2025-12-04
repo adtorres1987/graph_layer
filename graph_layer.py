@@ -210,8 +210,8 @@ class GraphInfo:
         field_names = [field.name() for field in layer.fields()]
 
         # Required fields
-        required_fields = ['CDCode', 'Region', 'CountyName', 'DistrictNa', 'SchoolName',
-                          'SchoolType', 'Status', 'SchoolLeve', 'City']
+        required_fields = ['CDCode', 'Region', 'CountyName', 'DistrictName', 'SchoolName',
+                          'SchoolType', 'Status', 'SchoolLevel', 'City']
 
         # Check if all required fields exist
         missing_fields = [f for f in required_fields if f not in field_names]
@@ -250,11 +250,11 @@ class GraphInfo:
                 'CDCode': str(feature['CDCode']) if feature['CDCode'] is not None else 'N/A',
                 'Region': str(feature['Region']) if feature['Region'] is not None else 'N/A',
                 'CountyName': str(feature['CountyName']) if feature['CountyName'] is not None else 'N/A',
-                'DistrictNa': str(feature['DistrictNa']) if feature['DistrictNa'] is not None else 'N/A',
+                'DistrictName': str(feature['DistrictName']) if feature['DistrictName'] is not None else 'N/A',
                 'SchoolName': str(feature['SchoolName']) if feature['SchoolName'] is not None else 'N/A',
                 'SchoolType': schooltype_value,
                 'Status': str(feature['Status']) if feature['Status'] is not None else 'N/A',
-                'SchoolLeve': str(feature['SchoolLeve']) if feature['SchoolLeve'] is not None else 'N/A',
+                'SchoolLevel': str(feature['SchoolLevel']) if feature['SchoolLevel'] is not None else 'N/A',
                 'City': str(feature['City']) if feature['City'] is not None else 'N/A'
             }
             features_data.append(feature_data)

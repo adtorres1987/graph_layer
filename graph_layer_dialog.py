@@ -128,8 +128,8 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         :param column_index: Index of the clicked column
         """
         # Define column order matching the UI
-        columns = ['CDCode', 'Region', 'CountyName', 'DistrictNa', 'SchoolName',
-                  'SchoolType', 'Status', 'SchoolLeve', 'City']
+        columns = ['CDCode', 'Region', 'CountyName', 'DistrictName', 'SchoolName',
+                  'SchoolType', 'Status', 'SchoolLevel', 'City']
 
         # Get the column name
         if column_index < len(columns) and self.all_features_data:
@@ -169,8 +169,8 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         self.data_table.setRowCount(len(features_data))
 
         # Define column order matching the UI
-        columns = ['CDCode', 'Region', 'CountyName', 'DistrictNa', 'SchoolName',
-                  'SchoolType', 'Status', 'SchoolLeve', 'City']
+        columns = ['CDCode', 'Region', 'CountyName', 'DistrictName', 'SchoolName',
+                  'SchoolType', 'Status', 'SchoolLevel', 'City']
 
         # Populate the table
         for row, feature in enumerate(features_data):
