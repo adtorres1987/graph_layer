@@ -5,18 +5,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1100</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle" >
-   <string>Graph layer - School Type Statistics</string>
+   <string>Graph layer</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="label_title">
      <property name="text">
-      <string>School Type Field Statistics</string>
+      <string>Field Statistics</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -43,7 +43,7 @@
    <item>
     <widget class="QLabel" name="label_table">
      <property name="text">
-      <string>School Data (All Records)</string>
+      <string>All Records</string>
      </property>
      <property name="font">
       <font>

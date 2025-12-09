@@ -61,12 +61,42 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         # Store all features data for dynamic column selection
         self.all_features_data = []
 
+        # Store graphable columns list
+        self.graphable_columns = []
+
         # Connect table header click signal
         self.data_table.horizontalHeader().sectionClicked.connect(self.on_table_header_clicked)
+
+    def plot_column_data_dynamic(self, column_name, column_counts, features_data, graphable_columns, layer_name=None):
+        """
+        Plot a bar chart with column data and populate the data table with only graphable columns
+
+        :param column_name: Name of the column to plot initially
+        :param column_counts: Dictionary with column values as keys and counts as values
+        :param features_data: List of dictionaries with feature data for the table (only graphable columns)
+        :param graphable_columns: List of column names that are suitable for graphing
+        :param layer_name: Name of the layer to display in the title (optional)
+        """
+        # Store all features data for later use when clicking on columns
+        self.all_features_data = features_data
+
+        # Store graphable columns
+        self.graphable_columns = graphable_columns
+
+        # Update title with layer name if provided
+        if layer_name:
+            self.label_title.setText(f"Field Statistics - {layer_name}")
+
+        # Plot the graph with the selected column data
+        self.plot_column_data(column_name, column_counts)
+
+        # Populate the data table with features data (only graphable columns)
+        self.populate_table_dynamic(features_data, graphable_columns)
 
     def plot_schooltype_data(self, schooltype_counts, features_data):
         """
         Plot a bar chart with SchoolType data and populate the data table
+        (Deprecated - kept for backwards compatibility)
 
         :param schooltype_counts: Dictionary with SchoolType values as keys and counts as values
         :param features_data: List of dictionaries with feature data for the table
@@ -107,7 +137,7 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
                    f'{int(height)}',
                    ha='center', va='bottom', fontsize=9)
 
-        # Customize plot
+        # Customize plot with labels and title
         ax.set_xlabel(column_name, fontsize=12, fontweight='bold')
         ax.set_ylabel('Count', fontsize=12, fontweight='bold')
         ax.set_title(f'Distribution of {column_name} in Active Layer', fontsize=14, fontweight='bold')
@@ -127,9 +157,13 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
 
         :param column_index: Index of the clicked column
         """
-        # Define column order matching the UI
-        columns = ['CDCode', 'Region', 'CountyName', 'DistrictName', 'SchoolName',
-                  'SchoolType', 'Status', 'SchoolLevel', 'City']
+        # Use graphable_columns if available, otherwise extract from first feature
+        if self.graphable_columns:
+            columns = self.graphable_columns
+        elif self.all_features_data:
+            columns = list(self.all_features_data[0].keys())
+        else:
+            return
 
         # Get the column name
         if column_index < len(columns) and self.all_features_data:
@@ -159,18 +193,19 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
             # Plot the graph with the selected column data
             self.plot_column_data(clicked_column, top_10_counts)
 
-    def populate_table(self, features_data):
+    def populate_table_dynamic(self, features_data, columns):
         """
-        Populate the QTableWidget with feature data
+        Populate the QTableWidget with feature data using dynamic columns
 
         :param features_data: List of dictionaries with feature data
+        :param columns: List of column names to display
         """
-        # Set the number of rows
+        # Set the number of rows and columns
         self.data_table.setRowCount(len(features_data))
+        self.data_table.setColumnCount(len(columns))
 
-        # Define column order matching the UI
-        columns = ['CDCode', 'Region', 'CountyName', 'DistrictName', 'SchoolName',
-                  'SchoolType', 'Status', 'SchoolLevel', 'City']
+        # Set column headers
+        self.data_table.setHorizontalHeaderLabels(columns)
 
         # Populate the table
         for row, feature in enumerate(features_data):
@@ -182,20 +217,10 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
                 item = QTableWidgetItem(str(value))
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # Make read-only
 
-                # Center align certain columns
-                # if field_name in ['CDCode', 'Status', 'SchoolLeve']:
-                #     item.setTextAlignment(Qt.AlignCenter)
-
                 self.data_table.setItem(row, col, item)
 
         # Resize columns to fit content
         self.data_table.resizeColumnsToContents()
-
-        # Adjust column widths for better visibility
-        # Make sure important columns are visible
-        # self.data_table.setColumnWidth(4, 200)  # SchoolName - wider
-        # self.data_table.setColumnWidth(2, 150)  # CountyName
-        # self.data_table.setColumnWidth(3, 150)  # DistrictNa
 
         # Make header clickable and add cursor
         header = self.data_table.horizontalHeader()
@@ -208,3 +233,19 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
                 header_item = QTableWidgetItem()
                 self.data_table.setHorizontalHeaderItem(col, header_item)
             header_item.setToolTip(f"Click to show {field_name} distribution in graph")
+
+    def populate_table(self, features_data):
+        """
+        Populate the QTableWidget with feature data
+        (Deprecated - uses dynamic columns instead of hardcoded list)
+
+        :param features_data: List of dictionaries with feature data
+        """
+        # Extract columns dynamically from the first feature if available
+        if not features_data:
+            return
+
+        columns = list(features_data[0].keys())
+
+        # Use the dynamic table population method
+        self.populate_table_dynamic(features_data, columns)

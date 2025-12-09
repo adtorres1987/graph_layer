@@ -206,73 +206,87 @@ class GraphInfo:
             )
             return
 
+        # Get layer name
+        layer_name = layer.name()
+
         # Get field names
         field_names = [field.name() for field in layer.fields()]
 
-        # Required fields
-        required_fields = ['CDCode', 'Region', 'CountyName', 'DistrictName', 'SchoolName',
-                          'SchoolType', 'Status', 'SchoolLevel', 'City']
-
-        # Check if all required fields exist
-        missing_fields = [f for f in required_fields if f not in field_names]
-        if missing_fields:
-            QMessageBox.warning(
-                self.iface.mainWindow(),
-                "Missing Fields",
-                f"The active layer is missing the following fields: {', '.join(missing_fields)}\n\nAvailable fields: {', '.join(field_names)}"
-            )
-            return
-
-        # Count SchoolType values and collect feature data
-        schooltype_counts = {}
+        # Analyze all columns to find those with repeated values suitable for bar charts
+        column_value_counts = {}
         features_data = []
 
+        # First pass: collect all data and count unique values per column
         for feature in layer.getFeatures():
-            # Get SchoolType value and convert QVariant to Python type
-            schooltype_value = feature['SchoolType']
+            feature_data = {}
 
-            # Convert QVariant to Python native type (str)
-            if schooltype_value is not None:
-                schooltype_value = str(schooltype_value)
+            for field_name in field_names:
+                # Get field value
+                field_value = feature[field_name]
 
-            # Handle NULL values
-            if schooltype_value is None or schooltype_value == '' or schooltype_value == 'NULL':
-                schooltype_value = 'N/A'
+                # Convert to string
+                if field_value is not None:
+                    field_value = str(field_value)
+                else:
+                    field_value = 'N/A'
 
-            # Count occurrences
-            if schooltype_value in schooltype_counts:
-                schooltype_counts[schooltype_value] += 1
-            else:
-                schooltype_counts[schooltype_value] = 1
+                # Handle NULL/empty values
+                if field_value == '' or field_value == 'NULL':
+                    field_value = 'N/A'
 
-            # Store feature data
-            feature_data = {
-                'CDCode': str(feature['CDCode']) if feature['CDCode'] is not None else 'N/A',
-                'Region': str(feature['Region']) if feature['Region'] is not None else 'N/A',
-                'CountyName': str(feature['CountyName']) if feature['CountyName'] is not None else 'N/A',
-                'DistrictName': str(feature['DistrictName']) if feature['DistrictName'] is not None else 'N/A',
-                'SchoolName': str(feature['SchoolName']) if feature['SchoolName'] is not None else 'N/A',
-                'SchoolType': schooltype_value,
-                'Status': str(feature['Status']) if feature['Status'] is not None else 'N/A',
-                'SchoolLevel': str(feature['SchoolLevel']) if feature['SchoolLevel'] is not None else 'N/A',
-                'City': str(feature['City']) if feature['City'] is not None else 'N/A'
-            }
+                # Store in feature data
+                feature_data[field_name] = field_value
+
+                # Count unique values for this column
+                if field_name not in column_value_counts:
+                    column_value_counts[field_name] = {}
+
+                if field_value in column_value_counts[field_name]:
+                    column_value_counts[field_name][field_value] += 1
+                else:
+                    column_value_counts[field_name][field_value] = 1
+
             features_data.append(feature_data)
 
-        # Check if we have data to plot
-        if not schooltype_counts:
+        # Identify columns suitable for bar charts
+        # A column is suitable if it has repeated values (unique count < total count)
+        # and not too many unique values (< 50% of total records or max 100 unique values)
+        total_features = len(features_data)
+        graphable_columns = []
+
+        for field_name, value_counts in column_value_counts.items():
+            unique_count = len(value_counts)
+
+            # Column must have repeated values (not all unique)
+            # and reasonable number of categories for visualization
+            if unique_count < total_features and unique_count <= min(100, total_features * 0.5):
+                graphable_columns.append(field_name)
+
+        # Check if we have graphable columns
+        if not graphable_columns:
             QMessageBox.warning(
                 self.iface.mainWindow(),
-                "No Data",
-                "No data found in the 'SchoolType' field."
+                "No Graphable Columns",
+                "No columns found with repeated values suitable for bar chart visualization.\n\n"
+                "All columns appear to have unique values for each feature."
             )
             return
 
+        # Filter features_data to only include graphable columns
+        filtered_features_data = []
+        for feature in features_data:
+            filtered_feature = {col: feature[col] for col in graphable_columns}
+            filtered_features_data.append(filtered_feature)
+
+        # Select the first graphable column as default for initial graph
+        default_column = graphable_columns[0]
+        default_counts = column_value_counts[default_column]
+
         # Sort by count (descending)
-        schooltype_counts = dict(sorted(schooltype_counts.items(), key=lambda x: x[1], reverse=True))
+        default_counts = dict(sorted(default_counts.items(), key=lambda x: x[1], reverse=True))
 
         # Get only top 10 categories for the graph
-        top_10_schooltypes = dict(list(schooltype_counts.items())[:10])
+        top_10_counts = dict(list(default_counts.items())[:10])
 
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
@@ -280,8 +294,9 @@ class GraphInfo:
             self.first_start = False
             self.dlg = GraphInfoDialog()
 
-        # Plot the data (top 10 for graph) and pass ALL features data for the table
-        self.dlg.plot_schooltype_data(top_10_schooltypes, features_data)
+        # Plot the data with graphable columns only
+        self.dlg.plot_column_data_dynamic(default_column, top_10_counts,
+                                         filtered_features_data, graphable_columns, layer_name)
 
         # show the dialog
         self.dlg.show()
