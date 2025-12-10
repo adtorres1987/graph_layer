@@ -50,7 +50,7 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
-        # Create matplotlib figure and canvas
+        # Create matplotlib figure and canvas for bar chart
         self.figure = Figure(figsize=(8, 5))
         self.canvas = FigureCanvas(self.figure)
 
@@ -58,14 +58,38 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         layout = QVBoxLayout(self.graph_widget)
         layout.addWidget(self.canvas)
 
+        # Create matplotlib figure and canvas for line chart
+        self.line_figure = Figure(figsize=(8, 4))
+        self.line_canvas = FigureCanvas(self.line_figure)
+
+        # Add canvas to the line_graph_widget
+        line_layout = QVBoxLayout(self.line_graph_widget)
+        line_layout.addWidget(self.line_canvas)
+
         # Store all features data for dynamic column selection
         self.all_features_data = []
 
         # Store graphable columns list
         self.graphable_columns = []
 
+        # Store current column being graphed
+        self.current_column = None
+
+        # Store filtered data for line chart
+        self.filtered_data = []
+        self.selected_filter_value = None
+
         # Connect table header click signal
         self.data_table.horizontalHeader().sectionClicked.connect(self.on_table_header_clicked)
+
+        # Connect value filter dropdown
+        self.value_filter.currentIndexChanged.connect(self.on_filter_changed)
+
+        # Connect column selector dropdown
+        self.column_selector.currentIndexChanged.connect(self.on_column_selected)
+
+        # Connect clear button
+        self.clear_button.clicked.connect(self.clear_filters)
 
     def plot_column_data_dynamic(self, column_name, column_counts, features_data, graphable_columns, layer_name=None):
         """
@@ -117,6 +141,12 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
         :param column_name: Name of the column being plotted
         :param column_counts: Dictionary with column values as keys and counts as values
         """
+        # Store current column
+        self.current_column = column_name
+
+        # Update value filter dropdown with distinct values
+        self.update_value_filter(column_counts)
+
         # Clear previous plot
         self.figure.clear()
 
@@ -249,3 +279,289 @@ class GraphInfoDialog(QtWidgets.QDialog, FORM_CLASS):
 
         # Use the dynamic table population method
         self.populate_table_dynamic(features_data, columns)
+
+    def update_value_filter(self, column_counts):
+        """
+        Update the value filter dropdown with distinct values from the current column
+
+        :param column_counts: Dictionary with column values as keys and counts as values
+        """
+        # Block signals to prevent triggering filter change while updating
+        self.value_filter.blockSignals(True)
+
+        # Clear existing items
+        self.value_filter.clear()
+
+        # Add "All" option as first item
+        self.value_filter.addItem("All")
+
+        # Add distinct values sorted by count (descending)
+        sorted_values = sorted(column_counts.items(), key=lambda x: x[1], reverse=True)
+        for value, count in sorted_values:
+            self.value_filter.addItem(f"{value} ({count})", value)
+
+        # Unblock signals
+        self.value_filter.blockSignals(False)
+
+    def plot_line_chart_single_column(self, filtered_data, filter_value, column_name):
+        """
+        Plot a line chart showing the distribution of a single selected column for the filtered data
+
+        :param filtered_data: List of filtered feature data
+        :param filter_value: The value that was used to filter
+        :param column_name: The column to analyze and plot
+        """
+        # Clear previous plot
+        self.line_figure.clear()
+
+        if not filtered_data:
+            self.line_graph_widget.setVisible(False)
+            return
+
+        # Hide bar chart and show line chart
+        self.graph_widget.setVisible(False)
+        self.line_graph_widget.setVisible(True)
+
+        # Create subplot
+        ax = self.line_figure.add_subplot(111)
+
+        # Count occurrences for the selected column
+        value_counts = {}
+        for feature in filtered_data:
+            value = feature.get(column_name, 'N/A')
+            if value in value_counts:
+                value_counts[value] += 1
+            else:
+                value_counts[value] = 1
+
+        # Sort by count (descending) and get top 20 values
+        sorted_counts = sorted(value_counts.items(), key=lambda x: x[1], reverse=True)[:20]
+
+        # Prepare data for line chart
+        categories = [str(val) for val, _ in sorted_counts]
+        counts = [cnt for _, cnt in sorted_counts]
+
+        # Create line chart
+        x_positions = range(len(categories))
+        ax.plot(x_positions, counts, marker='o', color='#1f77b4',
+                linewidth=2.5, markersize=8, markerfacecolor='#ff7f0e',
+                markeredgewidth=2, markeredgecolor='#1f77b4')
+
+        # Add value labels on points
+        for x, y in zip(x_positions, counts):
+            ax.text(x, y, str(y), ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+        # Customize plot
+        ax.set_xlabel(column_name, fontsize=11, fontweight='bold')
+        ax.set_ylabel('Count', fontsize=11, fontweight='bold')
+        ax.set_title(f'{column_name} Distribution - Filtered by {self.current_column} = {filter_value}',
+                    fontsize=12, fontweight='bold')
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels(categories, rotation=45, ha='right')
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
+        ax.grid(axis='x', alpha=0.2, linestyle=':')
+
+        self.line_figure.tight_layout()
+        self.line_canvas.draw()
+
+    def plot_line_chart(self, filtered_data, selected_value):
+        """
+        Plot a line chart showing the distribution of other columns for the filtered data
+        (Deprecated - replaced by plot_line_chart_single_column)
+
+        :param filtered_data: List of filtered feature data
+        :param selected_value: The value that was used to filter
+        """
+        # Clear previous plot
+        self.line_figure.clear()
+
+        if not filtered_data or not self.graphable_columns:
+            self.line_graph_widget.setVisible(False)
+            return
+
+        # Show the line graph widget
+        self.line_graph_widget.setVisible(True)
+
+        # Create subplot
+        ax = self.line_figure.add_subplot(111)
+
+        # Get columns excluding the current filter column
+        other_columns = [col for col in self.graphable_columns if col != self.current_column]
+
+        if not other_columns:
+            self.line_graph_widget.setVisible(False)
+            return
+
+        # Count occurrences for each column
+        column_data = {}
+        for col in other_columns:
+            counts = {}
+            for feature in filtered_data:
+                value = feature.get(col, 'N/A')
+                if value in counts:
+                    counts[value] += 1
+                else:
+                    counts[value] = 1
+            # Get top 5 values for this column
+            sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:5]
+            column_data[col] = sorted_counts
+
+        # Prepare data for line chart
+        x_positions = range(len(other_columns))
+
+        # Plot lines for top values across columns
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+
+        # Get all unique values across columns (top 5)
+        all_values = set()
+        for col_values in column_data.values():
+            for val, _ in col_values:
+                all_values.add(val)
+
+        # Plot line for each unique value
+        for idx, value in enumerate(list(all_values)[:5]):
+            y_values = []
+            for col in other_columns:
+                count = 0
+                for val, cnt in column_data[col]:
+                    if val == value:
+                        count = cnt
+                        break
+                y_values.append(count)
+
+            ax.plot(x_positions, y_values, marker='o', label=str(value),
+                   color=colors[idx % len(colors)], linewidth=2, markersize=6)
+
+        # Customize plot
+        ax.set_xlabel('Columns', fontsize=11, fontweight='bold')
+        ax.set_ylabel('Count', fontsize=11, fontweight='bold')
+        ax.set_title(f'Distribution Analysis - Filtered by {self.current_column} = {selected_value}',
+                    fontsize=12, fontweight='bold')
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels(other_columns, rotation=45, ha='right')
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
+        ax.legend(loc='best', fontsize=9)
+
+        self.line_figure.tight_layout()
+        self.line_canvas.draw()
+
+    def on_filter_changed(self, index):
+        """
+        Handle filter dropdown change - filter table by selected value and show column selector
+
+        :param index: Index of the selected item in the dropdown
+        """
+        if not self.current_column or not self.all_features_data:
+            return
+
+        # Get selected value
+        selected_value = self.value_filter.currentData()
+
+        # If "All" is selected or no data, show all records and hide column selector and line chart
+        if index == 0 or selected_value is None:
+            filtered_data = self.all_features_data
+            self.graph_widget.setVisible(True)
+            self.line_graph_widget.setVisible(False)
+            self.label_column_select.setVisible(False)
+            self.column_selector.setVisible(False)
+            self.clear_button.setVisible(False)
+            self.filtered_data = []
+            self.selected_filter_value = None
+        else:
+            # Filter data by selected value
+            filtered_data = [
+                feature for feature in self.all_features_data
+                if feature.get(self.current_column) == selected_value
+            ]
+
+            # Store filtered data for line chart
+            self.filtered_data = filtered_data
+            self.selected_filter_value = selected_value
+
+            # Always show bar chart and hide line chart when filter changes
+            self.graph_widget.setVisible(True)
+            self.line_graph_widget.setVisible(False)
+
+            # Populate column selector and show controls
+            self.populate_column_selector()
+            self.label_column_select.setVisible(True)
+            self.column_selector.setVisible(True)
+            self.clear_button.setVisible(True)
+
+        # Update table with filtered data
+        columns = self.graphable_columns if self.graphable_columns else list(self.all_features_data[0].keys())
+        self.populate_table_dynamic(filtered_data, columns)
+
+    def populate_column_selector(self):
+        """
+        Populate the column selector dropdown with available graphable columns (excluding current filter column)
+        """
+        # Block signals to prevent triggering column selection while updating
+        self.column_selector.blockSignals(True)
+
+        # Clear existing items
+        self.column_selector.clear()
+
+        # Add a placeholder option
+        self.column_selector.addItem("-- Select a column --")
+
+        # Get columns excluding the current filter column
+        other_columns = [col for col in self.graphable_columns if col != self.current_column]
+
+        # Add columns to selector
+        for col in other_columns:
+            self.column_selector.addItem(col)
+
+        # Unblock signals
+        self.column_selector.blockSignals(False)
+
+        # Set to placeholder (index 0)
+        self.column_selector.setCurrentIndex(0)
+
+    def on_column_selected(self, index):
+        """
+        Handle column selector change - update line chart with selected column
+
+        :param index: Index of the selected column in the dropdown
+        """
+        if not self.filtered_data or index < 0:
+            return
+
+        # Get selected column name
+        selected_column = self.column_selector.currentText()
+
+        # If placeholder is selected (index 0) or no valid column, hide line chart and show bar chart
+        if index == 0 or not selected_column or selected_column == "-- Select a column --":
+            self.graph_widget.setVisible(True)
+            self.line_graph_widget.setVisible(False)
+            return
+
+        # Show line chart with filtered data for the selected column
+        self.plot_line_chart_single_column(self.filtered_data, self.selected_filter_value, selected_column)
+
+    def clear_filters(self):
+        """
+        Clear all filters and reset the view to show all data
+        """
+        # Reset value filter to "All" (index 0)
+        self.value_filter.blockSignals(True)
+        self.value_filter.setCurrentIndex(0)
+        self.value_filter.blockSignals(False)
+
+        # Hide column selector and clear button
+        self.label_column_select.setVisible(False)
+        self.column_selector.setVisible(False)
+        self.clear_button.setVisible(False)
+
+        # Show bar chart and hide line chart
+        self.graph_widget.setVisible(True)
+        self.line_graph_widget.setVisible(False)
+
+        # Clear stored filter data
+        self.filtered_data = []
+        self.selected_filter_value = None
+
+        # Show all data in table
+        if self.all_features_data:
+            columns = self.graphable_columns if self.graphable_columns else list(self.all_features_data[0].keys())
+            self.populate_table_dynamic(self.all_features_data, columns)
